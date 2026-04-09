@@ -41,6 +41,7 @@ import DockerModelRunnerLogo from "@/media/llmprovider/docker-model-runner.png";
 import PrivateModeLogo from "@/media/llmprovider/privatemode.png";
 import SambaNovaLogo from "@/media/llmprovider/sambanova.png";
 import LemonadeLogo from "@/media/llmprovider/lemonade.png";
+import USAiGovLogo from "@/media/llmprovider/usai-gov.png";
 
 import PreLoader from "@/components/Preloader";
 import OpenAiOptions from "@/components/LLMSelection/OpenAiOptions";
@@ -79,6 +80,7 @@ import DockerModelRunnerOptions from "@/components/LLMSelection/DockerModelRunne
 import PrivateModeOptions from "@/components/LLMSelection/PrivateModeOptions";
 import SambaNovaOptions from "@/components/LLMSelection/SambaNovaOptions";
 import LemonadeOptions from "@/components/LLMSelection/LemonadeOptions";
+import USAiGovOptions from "@/components/LLMSelection/USAiGovOptions";
 
 import LLMItem from "@/components/LLMSelection/LLMItem";
 import { CaretUpDown, MagnifyingGlass, X } from "@phosphor-icons/react";
@@ -413,6 +415,18 @@ export const AVAILABLE_LLM_PROVIDERS = [
       "GenericOpenAiModelPref",
       "GenericOpenAiTokenLimit",
       "GenericOpenAiKey",
+    ],
+  },
+  {
+    name: "USAi.gov",
+    value: "usai-gov",
+    logo: USAiGovLogo,
+    options: (settings) => <USAiGovOptions settings={settings} />,
+    description: "Connect to USAi.gov OpenAI-compatible LLM service.",
+    requiredConfig: [
+      "USAiGovBasePath",
+      "USAiGovModelPref",
+      "USAiGovTokenLimit",
     ],
   },
 ];

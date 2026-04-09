@@ -243,6 +243,9 @@ function getLLMProvider({ provider = null, model = null } = {}) {
     case "lemonade":
       const { LemonadeLLM } = require("../AiProviders/lemonade");
       return new LemonadeLLM(embedder, model);
+    case "usai-gov":
+      const { USAiGovLLM } = require("../AiProviders/usaiGov");
+      return new USAiGovLLM(embedder, model);
     default:
       throw new Error(
         `ENV: No valid LLM_PROVIDER value found in environment! Using ${process.env.LLM_PROVIDER}`
@@ -425,6 +428,9 @@ function getLLMProviderClass({ provider = null } = {}) {
     case "lemonade":
       const { LemonadeLLM } = require("../AiProviders/lemonade");
       return LemonadeLLM;
+    case "usai-gov":
+      const { USAiGovLLM } = require("../AiProviders/usaiGov");
+      return USAiGovLLM;
     default:
       return null;
   }

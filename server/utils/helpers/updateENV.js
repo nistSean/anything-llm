@@ -234,6 +234,28 @@ const KEY_MAPPING = {
     checks: [nonZero],
   },
 
+  // USAi.gov LLM Settings
+  USAiGovBasePath: {
+    envKey: "USAI_GOV_BASE_PATH",
+    checks: [isValidURL],
+  },
+  USAiGovModelPref: {
+    envKey: "USAI_GOV_MODEL_PREF",
+    checks: [isNotEmpty],
+  },
+  USAiGovTokenLimit: {
+    envKey: "USAI_GOV_MODEL_TOKEN_LIMIT",
+    checks: [nonZero],
+  },
+  USAiGovKey: {
+    envKey: "USAI_GOV_API_KEY",
+    checks: [],
+  },
+  USAiGovMaxTokens: {
+    envKey: "USAI_GOV_MAX_TOKENS",
+    checks: [nonZero],
+  },
+
   // AWS Bedrock LLM InferenceSettings
   AwsBedrockLLMConnectionMethod: {
     envKey: "AWS_BEDROCK_LLM_CONNECTION_METHOD",
@@ -972,6 +994,7 @@ function supportedLLM(input = "") {
     "privatemode",
     "sambanova",
     "lemonade",
+    "usai-gov",
   ].includes(input);
   return validSelection ? null : `${input} is not a valid LLM provider.`;
 }

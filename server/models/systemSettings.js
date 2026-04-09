@@ -645,6 +645,13 @@ const SystemSettings = {
       GenericOpenAiKey: !!process.env.GENERIC_OPEN_AI_API_KEY,
       GenericOpenAiMaxTokens: process.env.GENERIC_OPEN_AI_MAX_TOKENS,
 
+      // USAi.gov Keys
+      USAiGovBasePath: process.env.USAI_GOV_BASE_PATH,
+      USAiGovModelPref: process.env.USAI_GOV_MODEL_PREF,
+      USAiGovTokenLimit: process.env.USAI_GOV_MODEL_TOKEN_LIMIT,
+      USAiGovKey: !!process.env.USAI_GOV_API_KEY,
+      USAiGovMaxTokens: process.env.USAI_GOV_MAX_TOKENS,
+
       // Foundry Keys
       FoundryBasePath: process.env.FOUNDRY_BASE_PATH,
       FoundryModelPref: process.env.FOUNDRY_MODEL_PREF,
