@@ -1007,9 +1007,14 @@ async function getSambaNovaModels(_apiKey = null) {
   }
 }
 
-async function getUSAiGovModels(basePath = null, apiKey = null) {
+async function getUSAiGovModels(basePath = null, _apiKey = null) {
   try {
     if (!basePath) return { models: [], error: "No base path provided" };
+
+    const apiKey =
+      _apiKey === true
+        ? process.env.USAI_GOV_API_KEY
+        : _apiKey || process.env.USAI_GOV_API_KEY || null;
 
     const { OpenAI: OpenAIApi } = require("openai");
     const openai = new OpenAIApi({
