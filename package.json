@@ -6,10 +6,7 @@
   "type": "module",
   "author": "Timothy Carambat (Mintplex Labs)",
   "license": "MIT",
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/mintplex-labs/anything-llm.git"
-  },
+  "repository": "git+https://github.com/mintplex-labs/anything-llm.git",
   "bugs": {
     "url": "https://github.com/mintplex-labs/anything-llm/issues"
   },

@@ -49,6 +49,7 @@ const SUPPORT_CUSTOM_MODELS = [
   "privatemode",
   "sambanova",
   "lemonade",
+  "usai-gov",
   // Embedding Engines
   "native-embedder",
   "cohere-embedder",
@@ -131,6 +132,8 @@ async function getCustomModels(provider = "", apiKey = null, basePath = null) {
       return await getSambaNovaModels(apiKey);
     case "lemonade":
       return await getLemonadeModels(basePath);
+    case "usai-gov":
+      return await getUSAiGovModels(basePath, apiKey);
     case "lemonade-embedder":
       return await getLemonadeModels(basePath, "embedding");
     default:
@@ -1001,6 +1004,38 @@ async function getSambaNovaModels(_apiKey = null) {
   } catch (e) {
     console.error(`SambaNova:getSambaNovaModels`, e.message);
     return { models: [], error: "Could not fetch SambaNova Models" };
+  }
+}
+
+async function getUSAiGovModels(basePath = null, apiKey = null) {
+  try {
+    if (!basePath) return { models: [], error: "No base path provided" };
+
+    const { OpenAI: OpenAIApi } = require("openai");
+    const openai = new OpenAIApi({
+      apiKey: apiKey || "not-needed",
+      baseURL: basePath,
+    });
+
+    const models = await openai.models
+      .list()
+      .then((results) => results.data)
+      .then((models) =>
+        models.map((model) => ({
+          id: model.id,
+          name: model.id,
+          organization: "USAi.gov",
+        }))
+      )
+      .catch((e) => {
+        console.error(`USAi.gov:listModels`, e.message);
+        return [];
+      });
+
+    return { models, error: null };
+  } catch (e) {
+    console.error(`USAi.gov:getModels`, e.message);
+    return { models: [], error: "Could not fetch USAi.gov models" };
   }
 }
 
