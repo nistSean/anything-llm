@@ -297,6 +297,10 @@ const TRANSLATIONS = {
       "mapping-help":
         "Map external fields to AnythingLLM expected fields: text, title, docId",
       "read-only": "Read-only (prevent adding documents to this collection)",
+      "include-metadata":
+        "Include metadata in LLM context (file path, line numbers)",
+      "include-metadata-help":
+        "When enabled, file paths and line numbers are prepended to each context snippet, helping the LLM provide more precise code references.",
       "embedding-warning":
         "The embedding model used must match the model that created the vectors in the external collection. Mismatched models will result in poor or nonsensical search results.",
     },

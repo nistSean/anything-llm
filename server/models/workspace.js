@@ -60,6 +60,7 @@ const Workspace = {
     "externalVectorCollection",
     "externalVectorSchemaMapping",
     "externalVectorReadOnly",
+    "externalVectorIncludeMetadata",
   ],
 
   validations: {
@@ -155,6 +156,13 @@ const Workspace = {
     },
     externalVectorReadOnly: (value) => {
       if (value === null || value === undefined) return true;
+      if (typeof value === "string") {
+        return value.toLowerCase() === "true" || value === "1";
+      }
+      return Boolean(value);
+    },
+    externalVectorIncludeMetadata: (value) => {
+      if (value === null || value === undefined) return false;
       if (typeof value === "string") {
         return value.toLowerCase() === "true" || value === "1";
       }

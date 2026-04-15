@@ -50,6 +50,39 @@ class QDrant extends VectorDatabase {
     return workspace?.externalVectorCollection || workspace?.slug;
   }
 
+  /**
+   * Formats context text with metadata header for LLM consumption
+   * @param {string} text - The main text content
+   * @param {Object} payload - The full payload with metadata
+   * @param {boolean} includeMetadata - Whether to include metadata header
+   * @returns {string} - Formatted context text
+   */
+  formatContextWithMetadata(text, payload, includeMetadata = false) {
+    if (!includeMetadata || !payload) return text;
+
+    const metadataLines = [];
+
+    // Add file path
+    if (payload.filePath || payload.title) {
+      metadataLines.push(`file: ${payload.filePath || payload.title}`);
+    }
+
+    // Add line numbers if available
+    if (payload.startLine !== undefined && payload.endLine !== undefined) {
+      metadataLines.push(`lines: ${payload.startLine}-${payload.endLine}`);
+    }
+
+    // Add segment hash if available
+    if (payload.segmentHash || payload.docId) {
+      metadataLines.push(`segment: ${payload.segmentHash || payload.docId}`);
+    }
+
+    if (metadataLines.length === 0) return text;
+
+    const metadataHeader = `<document_metadata>\n${metadataLines.join("\n")}\n</document_metadata>\n`;
+    return metadataHeader + text;
+  }
+
   async connect() {
     if (process.env.VECTOR_DB !== "qdrant")
       throw new Error("QDrant::Invalid ENV settings");
@@ -103,6 +136,7 @@ class QDrant extends VectorDatabase {
     topN = 4,
     filterIdentifiers = [],
     schemaMapping = null,
+    includeMetadata = false,
   }) {
     const result = {
       contextTexts: [],
@@ -131,8 +165,14 @@ class QDrant extends VectorDatabase {
         return;
       }
 
-      // Use translated 'text' field or fallback to original
-      result.contextTexts.push(payload?.text || "");
+      // Format context text with optional metadata header
+      const contextText = this.formatContextWithMetadata(
+        payload?.text || "",
+        payload,
+        includeMetadata
+      );
+
+      result.contextTexts.push(contextText);
       result.sourceDocuments.push({
         ...(payload || {}),
         id: response.id,
@@ -465,6 +505,7 @@ class QDrant extends VectorDatabase {
       topN,
       filterIdentifiers,
       schemaMapping,
+      includeMetadata: workspace?.externalVectorIncludeMetadata || false,
     });
 
     const sources = sourceDocuments.map((metadata, i) => {

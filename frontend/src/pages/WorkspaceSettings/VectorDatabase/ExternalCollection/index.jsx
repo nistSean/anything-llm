@@ -191,6 +191,28 @@ export default function ExternalCollection({ workspace, setHasChanges }) {
             </label>
           </div>
 
+          <div className="flex items-center gap-x-3 mt-2">
+            <input
+              type="checkbox"
+              name="externalVectorIncludeMetadata"
+              defaultChecked={workspace?.externalVectorIncludeMetadata || false}
+              onChange={() => setHasChanges(true)}
+              className="w-4 h-4"
+            />
+            <label className="text-white text-sm">
+              {t(
+                "vector-workspace.external.include-metadata",
+                "Include metadata in LLM context (file path, line numbers)"
+              )}
+            </label>
+          </div>
+          <p className="text-white text-opacity-60 text-xs font-medium pl-7 mt-1">
+            {t(
+              "vector-workspace.external.include-metadata-help",
+              "When enabled, file paths and line numbers are prepended to each context snippet, helping the LLM provide more precise code references."
+            )}
+          </p>
+
           <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-3 mt-2">
             <p className="text-yellow-200 text-xs">
               <strong>⚠️ Important:</strong>{" "}
