@@ -1007,8 +1007,9 @@ async function getSambaNovaModels(_apiKey = null) {
   }
 }
 
-async function getUSAiGovModels(basePath = null, _apiKey = null) {
+async function getUSAiGovModels(_basePath = null, _apiKey = null) {
   try {
+    const basePath = _basePath || process.env.USAI_GOV_BASE_PATH || null;
     if (!basePath) return { models: [], error: "No base path provided" };
 
     const apiKey =
