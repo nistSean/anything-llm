@@ -87,9 +87,11 @@ class QDrant extends VectorDatabase {
     return totalVectors;
   }
 
-  async namespaceCount(_namespace = null) {
+  async namespaceCount(_namespace = null, workspace = null) {
     const { client } = await this.connect();
-    const namespace = await this.namespace(client, _namespace);
+    // Use external collection if configured on workspace
+    const effectiveNamespace = workspace?.externalVectorCollection || _namespace;
+    const namespace = await this.namespace(client, effectiveNamespace);
     return namespace?.vectorCount || 0;
   }
 
@@ -154,10 +156,12 @@ class QDrant extends VectorDatabase {
     };
   }
 
-  async hasNamespace(namespace = null) {
-    if (!namespace) return false;
+  async hasNamespace(namespace = null, workspace = null) {
+    // Use external collection if configured on workspace
+    const effectiveNamespace = workspace?.externalVectorCollection || namespace;
+    if (!effectiveNamespace) return false;
     const { client } = await this.connect();
-    return await this.namespaceExists(client, namespace);
+    return await this.namespaceExists(client, effectiveNamespace);
   }
 
   async namespaceExists(client, namespace = null) {

@@ -102,7 +102,7 @@ async function streamResponse({
     model: workspace?.chatModel,
   });
   const VectorDb = getVectorDbClass();
-  const embeddingsCount = await VectorDb.namespaceCount(workspace.slug);
+  const embeddingsCount = await VectorDb.namespaceCount(workspace.slug, workspace);
 
   const {
     contextTexts: pinnedContextTexts,

@@ -38,8 +38,8 @@ async function streamChatWithForEmbed(
   const VectorDb = getVectorDbClass();
 
   const messageLimit = embed.message_limit ?? 20;
-  const hasVectorizedSpace = await VectorDb.hasNamespace(embed.workspace.slug);
-  const embeddingsCount = await VectorDb.namespaceCount(embed.workspace.slug);
+  const hasVectorizedSpace = await VectorDb.hasNamespace(embed.workspace.slug, embed.workspace);
+  const embeddingsCount = await VectorDb.namespaceCount(embed.workspace.slug, embed.workspace);
 
   // User is trying to query-mode chat a workspace that has no data in it - so
   // we should exit early as no information can be found under these conditions.

@@ -221,8 +221,8 @@ async function chatSync({
   });
   const VectorDb = getVectorDbClass();
   const messageLimit = workspace?.openAiHistory || 20;
-  const hasVectorizedSpace = await VectorDb.hasNamespace(workspace.slug);
-  const embeddingsCount = await VectorDb.namespaceCount(workspace.slug);
+  const hasVectorizedSpace = await VectorDb.hasNamespace(workspace.slug, workspace);
+  const embeddingsCount = await VectorDb.namespaceCount(workspace.slug, workspace);
 
   // User is trying to query-mode chat a workspace that has no data in it - so
   // we should exit early as no information can be found under these conditions.
@@ -571,8 +571,8 @@ async function streamChat({
 
   const VectorDb = getVectorDbClass();
   const messageLimit = workspace?.openAiHistory || 20;
-  const hasVectorizedSpace = await VectorDb.hasNamespace(workspace.slug);
-  const embeddingsCount = await VectorDb.namespaceCount(workspace.slug);
+  const hasVectorizedSpace = await VectorDb.hasNamespace(workspace.slug, workspace);
+  const embeddingsCount = await VectorDb.namespaceCount(workspace.slug, workspace);
 
   // User is trying to query-mode chat a workspace that has no data in it - so
   // we should exit early as no information can be found under these conditions.

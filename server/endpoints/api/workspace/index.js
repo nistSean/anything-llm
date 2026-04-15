@@ -959,8 +959,8 @@ function apiWorkspaceEndpoints(app) {
           });
 
         const VectorDb = getVectorDbClass();
-        const hasVectorizedSpace = await VectorDb.hasNamespace(workspace.slug);
-        const embeddingsCount = await VectorDb.namespaceCount(workspace.slug);
+        const hasVectorizedSpace = await VectorDb.hasNamespace(workspace.slug, workspace);
+        const embeddingsCount = await VectorDb.namespaceCount(workspace.slug, workspace);
 
         if (!hasVectorizedSpace || embeddingsCount === 0)
           return response.status(200).json({
