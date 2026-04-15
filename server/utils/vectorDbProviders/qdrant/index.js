@@ -8,12 +8,46 @@ const { sourceIdentifier } = require("../../chats");
 const { VectorDatabase } = require("../base");
 
 class QDrant extends VectorDatabase {
+  // Default mapping for Roo Code schema to AnythingLLM expected format
+  static ROO_CODE_SCHEMA_MAPPING = {
+    text: "codeChunk",
+    title: "filePath",
+    docId: "segmentHash",
+  };
+
   constructor() {
     super();
   }
 
   get name() {
     return "QDrant";
+  }
+
+  /**
+   * Translates external payload schema to AnythingLLM expected format
+   * @param {Object} payload - The external payload
+   * @param {Object} schemaMapping - Mapping of {expectedField: externalField}
+   * @returns {Object} - Translated payload with both original and mapped fields
+   */
+  translatePayload(payload, schemaMapping) {
+    if (!schemaMapping || !payload) return payload;
+
+    const translated = { ...payload };
+    for (const [expectedField, externalField] of Object.entries(schemaMapping)) {
+      if (payload[externalField] !== undefined) {
+        translated[expectedField] = payload[externalField];
+      }
+    }
+    return translated;
+  }
+
+  /**
+   * Gets the effective namespace for a workspace (external collection or slug)
+   * @param {Object} workspace - The workspace object
+   * @returns {string} - The collection name to use
+   */
+  getEffectiveNamespace(workspace) {
+    return workspace?.externalVectorCollection || workspace?.slug;
   }
 
   async connect() {
@@ -66,6 +100,7 @@ class QDrant extends VectorDatabase {
     similarityThreshold = 0.25,
     topN = 4,
     filterIdentifiers = [],
+    schemaMapping = null,
   }) {
     const result = {
       contextTexts: [],
@@ -81,16 +116,23 @@ class QDrant extends VectorDatabase {
 
     responses.forEach((response) => {
       if (response.score < similarityThreshold) return;
-      if (filterIdentifiers.includes(sourceIdentifier(response?.payload))) {
+
+      // Translate payload if schema mapping is provided (for external collections)
+      const payload = schemaMapping
+        ? this.translatePayload(response?.payload, schemaMapping)
+        : response?.payload;
+
+      if (filterIdentifiers.includes(sourceIdentifier(payload))) {
         this.logger(
           "QDrant: A source was filtered from context as it's parent document is pinned."
         );
         return;
       }
 
-      result.contextTexts.push(response?.payload?.text || "");
+      // Use translated 'text' field or fallback to original
+      result.contextTexts.push(payload?.text || "");
       result.sourceDocuments.push({
-        ...(response?.payload || {}),
+        ...(payload || {}),
         id: response.id,
         score: response.score,
       });
@@ -156,8 +198,25 @@ class QDrant extends VectorDatabase {
     namespace,
     documentData = {},
     fullFilePath = null,
-    skipCache = false
+    skipCache = false,
+    workspace = null
   ) {
+    // Prevent writes to external/read-only collections
+    if (
+      workspace?.externalVectorCollection &&
+      workspace?.externalVectorReadOnly !== false
+    ) {
+      this.logger(
+        "Blocked write to read-only external collection:",
+        workspace.externalVectorCollection
+      );
+      return {
+        vectorized: false,
+        error:
+          "Cannot add documents to a read-only external vector collection. Disable read-only mode in workspace settings to allow writes.",
+      };
+    }
+
     const { DocumentVectors } = require("../../../models/vectors");
     try {
       let vectorDimension = null;
@@ -355,27 +414,53 @@ class QDrant extends VectorDatabase {
     similarityThreshold = 0.25,
     topN = 4,
     filterIdentifiers = [],
+    workspace = null,
   }) {
     if (!namespace || !input || !LLMConnector)
       throw new Error("Invalid request to performSimilaritySearch.");
 
     const { client } = await this.connect();
-    if (!(await this.namespaceExists(client, namespace))) {
+
+    // Determine effective namespace (external collection or workspace slug)
+    const effectiveNamespace =
+      workspace?.externalVectorCollection || namespace;
+
+    if (!(await this.namespaceExists(client, effectiveNamespace))) {
       return {
         contextTexts: [],
         sources: [],
-        message: "Invalid query - no documents found for workspace!",
+        message: workspace?.externalVectorCollection
+          ? `External collection '${effectiveNamespace}' not found in Qdrant. Please verify the collection name exists.`
+          : "Invalid query - no documents found for workspace!",
       };
+    }
+
+    // Parse schema mapping if configured
+    let schemaMapping = null;
+    if (workspace?.externalVectorSchemaMapping) {
+      try {
+        schemaMapping = JSON.parse(workspace.externalVectorSchemaMapping);
+      } catch (e) {
+        this.logger(
+          "Failed to parse schema mapping, using Roo Code default:",
+          e.message
+        );
+        schemaMapping = QDrant.ROO_CODE_SCHEMA_MAPPING;
+      }
+    } else if (workspace?.externalVectorCollection) {
+      // Use Roo Code default mapping for external collections without custom mapping
+      schemaMapping = QDrant.ROO_CODE_SCHEMA_MAPPING;
     }
 
     const queryVector = await LLMConnector.embedTextInput(input);
     const { contextTexts, sourceDocuments } = await this.similarityResponse({
       client,
-      namespace,
+      namespace: effectiveNamespace,
       queryVector,
       similarityThreshold,
       topN,
       filterIdentifiers,
+      schemaMapping,
     });
 
     const sources = sourceDocuments.map((metadata, i) => {

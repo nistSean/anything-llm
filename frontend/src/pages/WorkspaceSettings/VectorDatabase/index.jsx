@@ -1,19 +1,30 @@
 import Workspace from "@/models/workspace";
+import System from "@/models/system";
 import showToast from "@/utils/toast";
 import { castToType } from "@/utils/types";
-import { useRef, useState } from "react";
+import { useRef, useState, useEffect } from "react";
 import VectorDBIdentifier from "./VectorDBIdentifier";
 import MaxContextSnippets from "./MaxContextSnippets";
 import DocumentSimilarityThreshold from "./DocumentSimilarityThreshold";
 import ResetDatabase from "./ResetDatabase";
 import VectorCount from "./VectorCount";
 import VectorSearchMode from "./VectorSearchMode";
+import ExternalCollection from "./ExternalCollection";
 import CTAButton from "@/components/lib/CTAButton";
 
 export default function VectorDatabase({ workspace }) {
   const [hasChanges, setHasChanges] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [vectorDbProvider, setVectorDbProvider] = useState(null);
   const formEl = useRef(null);
+
+  useEffect(() => {
+    async function fetchVectorDbProvider() {
+      const settings = await System.keys();
+      setVectorDbProvider(settings?.VectorDB || "lancedb");
+    }
+    fetchVectorDbProvider();
+  }, []);
 
   const handleUpdate = async (e) => {
     setSaving(true);
@@ -21,6 +32,20 @@ export default function VectorDatabase({ workspace }) {
     const data = {};
     const form = new FormData(formEl.current);
     for (var [key, value] of form.entries()) data[key] = castToType(key, value);
+
+    // Handle checkbox for useExternalCollection
+    // If unchecked, we should clear the external collection settings
+    if (!form.has("useExternalCollection") || !form.get("useExternalCollection")) {
+      data.externalVectorCollection = null;
+      data.externalVectorSchemaMapping = null;
+      data.externalVectorReadOnly = true;
+    }
+
+    // Handle read-only checkbox (unchecked means false)
+    if (form.has("useExternalCollection") && form.get("useExternalCollection")) {
+      data.externalVectorReadOnly = form.has("externalVectorReadOnly");
+    }
+
     const { workspace: updatedWorkspace, message } = await Workspace.update(
       workspace.slug,
       data
@@ -33,6 +58,11 @@ export default function VectorDatabase({ workspace }) {
     setSaving(false);
     setHasChanges(false);
   };
+
+  // Check if workspace is using an external collection and it's read-only
+  const isExternalReadOnly =
+    workspace?.externalVectorCollection &&
+    workspace?.externalVectorReadOnly !== false;
 
   if (!workspace) return null;
   return (
@@ -53,6 +83,15 @@ export default function VectorDatabase({ workspace }) {
           <VectorDBIdentifier workspace={workspace} />
           <VectorCount reload={true} workspace={workspace} />
         </div>
+
+        {/* External Collection Configuration - only show for Qdrant */}
+        {vectorDbProvider === "qdrant" && (
+          <ExternalCollection
+            workspace={workspace}
+            setHasChanges={setHasChanges}
+          />
+        )}
+
         <VectorSearchMode workspace={workspace} setHasChanges={setHasChanges} />
         <MaxContextSnippets
           workspace={workspace}
@@ -62,7 +101,9 @@ export default function VectorDatabase({ workspace }) {
           workspace={workspace}
           setHasChanges={setHasChanges}
         />
-        <ResetDatabase workspace={workspace} />
+
+        {/* Only show reset for non-external or non-readonly collections */}
+        {!isExternalReadOnly && <ResetDatabase workspace={workspace} />}
       </form>
     </div>
   );

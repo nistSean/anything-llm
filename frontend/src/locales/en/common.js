@@ -258,6 +258,7 @@ const TRANSLATIONS = {
   },
   "vector-workspace": {
     identifier: "Vector database identifier",
+    "external-collection": "External Collection",
     snippets: {
       title: "Max Context Snippets",
       description:
@@ -280,6 +281,24 @@ const TRANSLATIONS = {
         "You are about to reset this workspace's vector database. This will remove all vector embeddings currently embedded.\n\nThe original source files will remain untouched. This action is irreversible.",
       error: "Workspace vector database could not be reset!",
       success: "Workspace vector database was reset!",
+    },
+    external: {
+      title: "External Vector Collection",
+      description:
+        "Use an existing Qdrant collection instead of creating a new one. This is useful for connecting to collections created by external tools like Roo Code.",
+      "use-external": "Use external collection",
+      "collection-name": "Collection Name",
+      "collection-placeholder": "ws-549bb28398322085",
+      "collection-help": "The exact name of the Qdrant collection to use.",
+      "schema-preset": "Schema Preset",
+      "schema-roo-code": "Roo Code (codeChunk, filePath, segmentHash)",
+      "schema-custom": "Custom Schema Mapping",
+      "custom-mapping": "Custom Schema Mapping (JSON)",
+      "mapping-help":
+        "Map external fields to AnythingLLM expected fields: text, title, docId",
+      "read-only": "Read-only (prevent adding documents to this collection)",
+      "embedding-warning":
+        "The embedding model used must match the model that created the vectors in the external collection. Mismatched models will result in poor or nonsensical search results.",
     },
   },
   agent: {

@@ -56,6 +56,10 @@ const Workspace = {
     "agentModel",
     "queryRefusalResponse",
     "vectorSearchMode",
+    // External Vector Collection Configuration
+    "externalVectorCollection",
+    "externalVectorSchemaMapping",
+    "externalVectorReadOnly",
   ],
 
   validations: {
@@ -130,6 +134,31 @@ const Workspace = {
       )
         return "default";
       return value;
+    },
+    externalVectorCollection: (value) => {
+      if (!value || typeof value !== "string") return null;
+      return String(value).trim();
+    },
+    externalVectorSchemaMapping: (value) => {
+      if (!value) return null;
+      try {
+        // Validate it's valid JSON
+        if (typeof value === "string") {
+          JSON.parse(value);
+          return value;
+        }
+        // If it's already an object, stringify it
+        return JSON.stringify(value);
+      } catch {
+        return null;
+      }
+    },
+    externalVectorReadOnly: (value) => {
+      if (value === null || value === undefined) return true;
+      if (typeof value === "string") {
+        return value.toLowerCase() === "true" || value === "1";
+      }
+      return Boolean(value);
     },
   },
 

@@ -226,6 +226,7 @@ async function buildSearchContext({
           topN: workspace?.topN,
           filterIdentifiers: pinnedDocIdentifiers,
           rerank: workspace?.vectorSearchMode === "rerank",
+          workspace,
         })
       : { contextTexts: [], sources: [], message: null };
 

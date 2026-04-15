@@ -137,6 +137,10 @@ model workspaces {
   agentModel                   String?
   queryRefusalResponse         String?
   vectorSearchMode             String?                        @default("default")
+  // External Vector Collection Configuration (for Roo Code integration)
+  externalVectorCollection     String?                        // The external collection name (e.g., "ws-549bb28398322085")
+  externalVectorSchemaMapping  String?                        // JSON string mapping external fields to expected fields
+  externalVectorReadOnly       Boolean?                       @default(true)  // Prevent writes to external collections
   workspace_users              workspace_users[]
   documents                    workspace_documents[]
   workspace_suggested_messages workspace_suggested_messages[]

@@ -93,6 +93,7 @@ const memory = {
                   LLMConnector,
                   topN: workspace?.topN ?? 4,
                   rerank: workspace?.vectorSearchMode === "rerank",
+                  workspace,
                 });
 
               if (contextTexts.length === 0) {
