@@ -121,6 +121,13 @@ const memory = {
             try {
               const workspace = this.super.handlerProps.invocation.workspace;
               const vectorDB = getVectorDbClass();
+              // Always write to the workspace's own overlay namespace (slug),
+              // never to a readonly external collection. Pass a workspace
+              // override with externalVectorCollection cleared so the
+              // provider writes to the slug namespace directly.
+              const writeWorkspace = workspace?.externalVectorReadOnly !== false
+                ? { ...workspace, externalVectorCollection: null }
+                : workspace;
               const { error } = await vectorDB.addDocumentToNamespace(
                 workspace.slug,
                 {
@@ -137,7 +144,9 @@ const memory = {
                   pageContent: content,
                   token_count_estimate: 0,
                 },
-                null
+                null,
+                false,
+                writeWorkspace
               );
 
               if (!!error)

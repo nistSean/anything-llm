@@ -122,10 +122,25 @@ class QDrant extends VectorDatabase {
 
   async namespaceCount(_namespace = null, workspace = null) {
     const { client } = await this.connect();
-    // Use external collection if configured on workspace
-    const effectiveNamespace = workspace?.externalVectorCollection || _namespace;
-    const namespace = await this.namespace(client, effectiveNamespace);
-    return namespace?.vectorCount || 0;
+    let total = 0;
+
+    // Count vectors in the workspace's own (overlay) namespace
+    const overlayNs = await this.namespace(client, _namespace);
+    total += overlayNs?.vectorCount || 0;
+
+    // Also count vectors in the external collection if configured
+    if (
+      workspace?.externalVectorCollection &&
+      workspace.externalVectorCollection !== _namespace
+    ) {
+      const externalNs = await this.namespace(
+        client,
+        workspace.externalVectorCollection
+      );
+      total += externalNs?.vectorCount || 0;
+    }
+
+    return total;
   }
 
   async similarityResponse({
@@ -197,11 +212,21 @@ class QDrant extends VectorDatabase {
   }
 
   async hasNamespace(namespace = null, workspace = null) {
-    // Use external collection if configured on workspace
-    const effectiveNamespace = workspace?.externalVectorCollection || namespace;
-    if (!effectiveNamespace) return false;
+    if (!namespace) return false;
     const { client } = await this.connect();
-    return await this.namespaceExists(client, effectiveNamespace);
+
+    // Check the workspace's own overlay namespace
+    if (await this.namespaceExists(client, namespace)) return true;
+
+    // Also check the external collection if configured
+    if (workspace?.externalVectorCollection) {
+      return await this.namespaceExists(
+        client,
+        workspace.externalVectorCollection
+      );
+    }
+
+    return false;
   }
 
   async namespaceExists(client, namespace = null) {
@@ -245,20 +270,16 @@ class QDrant extends VectorDatabase {
     skipCache = false,
     workspace = null
   ) {
-    // Prevent writes to external/read-only collections
+    // When an external collection is readonly, redirect writes to the
+    // workspace's own overlay namespace (the workspace slug) instead of blocking.
     if (
       workspace?.externalVectorCollection &&
       workspace?.externalVectorReadOnly !== false
     ) {
       this.logger(
-        "Blocked write to read-only external collection:",
-        workspace.externalVectorCollection
+        "Redirecting write to workspace overlay namespace (external collection is read-only):",
+        namespace
       );
-      return {
-        vectorized: false,
-        error:
-          "Cannot add documents to a read-only external vector collection. Disable read-only mode in workspace settings to allow writes.",
-      };
     }
 
     const { DocumentVectors } = require("../../../models/vectors");
@@ -464,49 +485,91 @@ class QDrant extends VectorDatabase {
       throw new Error("Invalid request to performSimilaritySearch.");
 
     const { client } = await this.connect();
+    const queryVector = await LLMConnector.embedTextInput(input);
 
-    // Determine effective namespace (external collection or workspace slug)
-    const effectiveNamespace =
-      workspace?.externalVectorCollection || namespace;
+    const hasExternal = !!workspace?.externalVectorCollection;
+    const externalNamespace = workspace?.externalVectorCollection;
+    const overlayNamespace = namespace; // workspace slug
 
-    if (!(await this.namespaceExists(client, effectiveNamespace))) {
+    // Determine which namespaces to search
+    const namespacesToSearch = [];
+
+    // Always try the overlay (workspace slug) namespace
+    if (await this.namespaceExists(client, overlayNamespace)) {
+      namespacesToSearch.push({ ns: overlayNamespace, schemaMapping: null, includeMetadata: false });
+    }
+
+    // Also search the external collection if configured
+    if (hasExternal && externalNamespace !== overlayNamespace) {
+      if (await this.namespaceExists(client, externalNamespace)) {
+        let schemaMapping = null;
+        if (workspace?.externalVectorSchemaMapping) {
+          try {
+            schemaMapping = JSON.parse(workspace.externalVectorSchemaMapping);
+          } catch (e) {
+            this.logger(
+              "Failed to parse schema mapping, using Roo Code default:",
+              e.message
+            );
+            schemaMapping = QDrant.ROO_CODE_SCHEMA_MAPPING;
+          }
+        } else {
+          schemaMapping = QDrant.ROO_CODE_SCHEMA_MAPPING;
+        }
+        namespacesToSearch.push({
+          ns: externalNamespace,
+          schemaMapping,
+          includeMetadata: workspace?.externalVectorIncludeMetadata || false,
+        });
+      }
+    }
+
+    if (namespacesToSearch.length === 0) {
       return {
         contextTexts: [],
         sources: [],
-        message: workspace?.externalVectorCollection
-          ? `External collection '${effectiveNamespace}' not found in Qdrant. Please verify the collection name exists.`
+        message: hasExternal
+          ? `Neither workspace overlay nor external collection '${externalNamespace}' found in Qdrant.`
           : "Invalid query - no documents found for workspace!",
       };
     }
 
-    // Parse schema mapping if configured
-    let schemaMapping = null;
-    if (workspace?.externalVectorSchemaMapping) {
-      try {
-        schemaMapping = JSON.parse(workspace.externalVectorSchemaMapping);
-      } catch (e) {
-        this.logger(
-          "Failed to parse schema mapping, using Roo Code default:",
-          e.message
-        );
-        schemaMapping = QDrant.ROO_CODE_SCHEMA_MAPPING;
-      }
-    } else if (workspace?.externalVectorCollection) {
-      // Use Roo Code default mapping for external collections without custom mapping
-      schemaMapping = QDrant.ROO_CODE_SCHEMA_MAPPING;
-    }
+    // Search all namespaces in parallel and merge results
+    const allResults = await Promise.all(
+      namespacesToSearch.map(({ ns, schemaMapping, includeMetadata }) =>
+        this.similarityResponse({
+          client,
+          namespace: ns,
+          queryVector,
+          similarityThreshold,
+          topN,
+          filterIdentifiers,
+          schemaMapping,
+          includeMetadata,
+        })
+      )
+    );
 
-    const queryVector = await LLMConnector.embedTextInput(input);
-    const { contextTexts, sourceDocuments } = await this.similarityResponse({
-      client,
-      namespace: effectiveNamespace,
-      queryVector,
-      similarityThreshold,
-      topN,
-      filterIdentifiers,
-      schemaMapping,
-      includeMetadata: workspace?.externalVectorIncludeMetadata || false,
-    });
+    // Merge, deduplicate by vector id, sort by score descending, cap at topN
+    const seen = new Set();
+    const merged = [];
+    for (const result of allResults) {
+      for (let i = 0; i < result.sourceDocuments.length; i++) {
+        const id = result.sourceDocuments[i].id;
+        if (seen.has(id)) continue;
+        seen.add(id);
+        merged.push({
+          contextText: result.contextTexts[i],
+          sourceDocument: result.sourceDocuments[i],
+          score: result.scores[i],
+        });
+      }
+    }
+    merged.sort((a, b) => b.score - a.score);
+    const top = merged.slice(0, topN);
+
+    const contextTexts = top.map((r) => r.contextText);
+    const sourceDocuments = top.map((r) => r.sourceDocument);
 
     const sources = sourceDocuments.map((metadata, i) => {
       return { ...metadata, text: contextTexts[i] };

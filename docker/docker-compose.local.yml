@@ -20,6 +20,8 @@ services:
       # Change this path to match where your data is stored
       - "${STORAGE_LOCATION:-$HOME/anythingllm}:/app/server/storage"
       - "${STORAGE_LOCATION:-$HOME/anythingllm}/.env:/app/server/.env"
+      # Host directory accessible to the filesystem agent (inside anythingllm-fs)
+      - "/Users/sean/Developer/xgitlab/meis:/app/server/storage/anythingllm-fs/meis"
     user: "${UID:-1000}:${GID:-1000}"
     ports:
       - "8031:3001"
